@@ -102,7 +102,7 @@ for x in file:
     Follows = GetAllFollows(StreamersName)
     Users.append([StreamersName,Follows])
 
-print("Bot Launcehd")
+print("Bot Launched")
 
 while True:
     start = time.time()
