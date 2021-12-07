@@ -1,114 +1,75 @@
-import requests,json,sys
-import time
+import api
 import tweepy
-BASE_URL = 'https://api.twitch.tv/helix/'
-authURL = 'https://id.twitch.tv/oauth2/token'
 
+users = {}
 
-CLIENT_ID = ''
-token = ''
-CONSUMER_KEY = ""
-CONSUMER_SECRET = ""
-ACCESS_TOKEN = ""
-ACCESS_TOKEN_SECRET = ""
+keys = open("keystwitter.txt", 'r')
 
-TwitterAuth = tweepy.OAuthHandler(CONSUMER_KEY,CONSUMER_SECRET)
+CONSUMER_KEY = keys.readline().strip()
+CONSUMER_SECRET = keys.readline().strip()
+ACCESS_TOKEN = keys.readline().strip()
+ACCESS_TOKEN_SECRET = keys.readline().strip()
+
+TwitterAuth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 TwitterAuth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
 
-api = tweepy.API(TwitterAuth)
+tweeter = tweepy.API(TwitterAuth)
+
+StinkyChesse = ['mandzio', 'ewroon', 'klaudiacroft']
 
 
-AutParams = {'client_id': CLIENT_ID,
-             'client_secret': token,
-             'grant_type': 'client_credentials'
-             }
-
-AUTCALL = requests.post(url=authURL, params=AutParams)
-ACCESS_TOKEN = AUTCALL.json()['access_token']
-HEADERS = {'Client-ID' : CLIENT_ID, 'Authorization' :  "Bearer " + ACCESS_TOKEN}
-
-def get_response(query):
-    url = BASE_URL + query
-    response = requests.get(url, headers=HEADERS)
-    return response
-
-def get_user_query(user_login):
-    return 'users?login={0}'.format(user_login)
-
-def get_follows_query(User_follows, pagination):
-    user_id = get_User_ID(User_follows)
-    return 'users/follows?from_id={0}&first=100&after={1}'.format(user_id,pagination)
+def initialize():
+    file = open("users.txt", "r")
+    for data in file:
+        user_name = data.strip()
+        print(user_name)
+        user_id = api.get_user_id(user_name)
+        follows = api.get_all_follows(user_id)
+        users[user_name] = [user_id, follows]
+    print("Bot Launched")
 
 
-def get_User_ID(user_login):
-    query = get_user_query(user_login)
-    response = get_response(query)
-    response_json = response.json()
+def send_tweet(user_login, user, action):
+    if user in StinkyChesse or user_login in StinkyChesse:
+        user_login = "🧀 " + user_login
+        user = user + " 🧀 "
     try:
-        User_ID = response_json['data'][0]['id']
-        return (User_ID)
-    except:
-        Sadge = 1
-
-def GetAllFollows(user_login):
-    pagination = ""
-    Follows = []
-    while True:
-        query = get_follows_query(user_login, pagination)
-        response = get_response(query)
-        response_json = response.json()
-        length = len(response_json['data'])
-
-        for x in range(length):
-            try:
-                Follows.append(response_json['data'][x]['to_name'])
-            except:
-                Sadge = 1
-        try:
-            pagination = response_json['pagination']['cursor']
-        except:
-            return Follows
-
-
-def CheckNew (user_login, Follows):
-    NewFollows = GetAllFollows(user_login)
-
-    Follow = list(set(NewFollows)-set(Follows))
-    Unfollows = list(set(Follows)-set(NewFollows))
-
-    for user in Follow:
-        try:
-            api.update_status(user_login + " has just followed " + user)
+        if action == "F":
+            tweeter.update_status(user_login + " has just followed " + user)
             print(user_login + " has just followed " + user)
-        except tweepy.TweepError as e:
-            print(user_login + " has just followed " + user + "is an error - status duplicate")
-
-    for user in Unfollows:
-        try:
-            api.update_status(user_login + " has just unfollowed " + user + "🤯")
+        elif action == "U":
+            tweeter.update_status(user_login + " has just unfollowed " + user + "🤯")
             print(user_login + " has just unfollowed " + user + "🤯")
-        except tweepy.TweepError as e:
-            print(user_login + " has just unfollowed " + user + "is an error - status duplicate")
+        elif action == "B":
+            tweeter.update_status(user_login + " has just been banned.")
+            print(user_login + " has just been banned.")
+    except tweepy.TweepError as e:
+        print(user_login + " has just followed " + user + "is an error - status duplicate")
 
-    return NewFollows
 
-file = open("users.txt","r")
-Users = []
-for x in file:
-    if x.endswith("\n"):
-        StreamersName = x[:-1]
-    else:
-        StreamersName = x
-    Follows = GetAllFollows(StreamersName)
-    Users.append([StreamersName,Follows])
+def check_if_new(user_name, user_id, old_follows):
+    try:
+        new_follows = api.get_all_follows(user_id)
 
-print("Bot Launcehd")
+        follows = list(set(new_follows) - set(old_follows))
+        unfollows = list(set(old_follows) - set(new_follows))
+        if len(unfollows) > 20:
+            send_tweet(user_name, '', 'B')
+            return new_follows
+        for user in follows:
+            target_user = api.get_user_name_from_id(user)
+            send_tweet(user_name, target_user, "F")
+        for user in unfollows:
+            target_user = api.get_user_name_from_id(user)
+            send_tweet(user_name, target_user, "U")
 
+        return new_follows
+    except Exception as e:
+        print(e)
+        return old_follows
+
+
+initialize()
 while True:
-    start = time.time()
-    for user in Users:
-        Follows = user[1]
-        StreamersName = user[0]
-        user[1]=CheckNew(StreamersName, Follows)
-        end = time.time()
-        ##print(end-start)
+    for user in users:
+        users[user][1] = check_if_new(user, users[user][0], users[user][1])
