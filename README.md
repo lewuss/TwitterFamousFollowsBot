@@ -1,2 +1,3 @@
 # TwitterFamousFollowsBot
-Bot that keeps track of follows and unfollows of famous polish twitch streamers
+Bot that keeps track of follows and unfollows of famous polish twitch streamers.
+https://twitter.com/TwitchFollowsPL
