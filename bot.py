@@ -12,17 +12,21 @@ CLIENT_ID = keys.readline().strip()
 token = keys.readline().strip()
 oauth = keys.readline().strip()
 
-keys_twitter = open("keystwitter.txt", 'r')
+keys_twitter = open("keystwitterNEW.txt", 'r')
 
 CONSUMER_KEY = keys_twitter.readline().strip()
 CONSUMER_SECRET = keys_twitter.readline().strip()
 ACCESS_TOKEN = keys_twitter.readline().strip()
 ACCESS_TOKEN_SECRET = keys_twitter.readline().strip()
+BARRER = keys_twitter.readline().strip()
+tweeter = tweepy.Client(BARRER)
 
-TwitterAuth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-TwitterAuth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-
-tweeter = tweepy.API(TwitterAuth)
+tweeter = tweepy.Client(
+    consumer_key=CONSUMER_KEY,
+    consumer_secret=CONSUMER_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_TOKEN_SECRET
+)
 
 AutParams = {'client_id': CLIENT_ID,
              'client_secret': token,
@@ -90,10 +94,10 @@ def get_ban(channel):
     response = requests.post('https://gql.twitch.tv/gql', json={"query": query}, headers=headers_ql).json()
     return response['data']['userResultByLogin']
 
-
 def send_ban_tweet(channel, type):
-    tweeter.update_status(f'{channel} has been banned. Ban_type: {type}')
+    tweeter.create_tweet(text=f'{channel} has been banned. Ban_type: {type}')
 
+send_ban_tweet('chuj','chuj')
 
 def is_banned(channel):
     ban_type = get_ban(channel)
@@ -190,6 +194,7 @@ if __name__ == "__main__":
     with open("banned.txt", 'r') as b:
         for line in b:
             banned.append(line.strip())
+    is_banned('llleasy_')
     with open('user_ids.txt', 'r') as f:
         for line in f:
             values = line.strip().split(' ')
