@@ -194,7 +194,6 @@ if __name__ == "__main__":
     with open("banned.txt", 'r') as b:
         for line in b:
             banned.append(line.strip())
-    is_banned('llleasy_')
     with open('user_ids.txt', 'r') as f:
         for line in f:
             values = line.strip().split(' ')
