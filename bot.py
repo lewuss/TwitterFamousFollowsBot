@@ -1,6 +1,7 @@
 import requests
 import json
 import tweepy
+import time
 
 BASE_URL = 'https://api.twitch.tv/helix/'
 AUTH_URL = 'https://id.twitch.tv/oauth2/token'
@@ -11,17 +12,21 @@ CLIENT_ID = keys.readline().strip()
 token = keys.readline().strip()
 oauth = keys.readline().strip()
 
-keys_twitter = open("keystwitter.txt", 'r')
+keys_twitter = open("keystwitterNEW.txt", 'r')
 
 CONSUMER_KEY = keys_twitter.readline().strip()
 CONSUMER_SECRET = keys_twitter.readline().strip()
 ACCESS_TOKEN = keys_twitter.readline().strip()
 ACCESS_TOKEN_SECRET = keys_twitter.readline().strip()
+BARRER = keys_twitter.readline().strip()
+tweeter = tweepy.Client(BARRER)
 
-TwitterAuth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-TwitterAuth.set_access_token(ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-
-tweeter = tweepy.API(TwitterAuth)
+tweeter = tweepy.Client(
+    consumer_key=CONSUMER_KEY,
+    consumer_secret=CONSUMER_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_TOKEN_SECRET
+)
 
 AutParams = {'client_id': CLIENT_ID,
              'client_secret': token,
@@ -89,15 +94,18 @@ def get_ban(channel):
     response = requests.post('https://gql.twitch.tv/gql', json={"query": query}, headers=headers_ql).json()
     return response['data']['userResultByLogin']
 
-
 def send_ban_tweet(channel, type):
-    tweeter.update_status(f'{channel} has been banned. Ban_type: {type}')
+    tweeter.create_tweet(text=f'{channel} has been banned. Ban_type: {type}')
 
+send_ban_tweet('chuj','chuj')
 
 def is_banned(channel):
     ban_type = get_ban(channel)
-    if ban_type:
+    if ban_type and channel not in banned:
         send_ban_tweet(channel, ban_type['reason'])
+        banned.append(channel)
+        with open("banned.txt", 'a') as b:
+            b.write(channel+'\n')
         return True
     else:
         return False
@@ -160,21 +168,32 @@ def get_changes_and_send_tweets(user, user_id, old_follows):
     unfollows_names = change_id_to_name(unfollows_ids)
     follows_names = change_id_to_name(new_follows_ids)
 
-    if len(unfollows_names) > 10:
-        top = get_top_ten(get_users_with_num_follows(unfollows_names))
-        send_unfollow_tweet(user, top, 'i paru innych laczków xD')
-    elif len(unfollows_names) > 0:
-        send_unfollow_tweet(user, unfollows_names, '')
-    if len(follows_names) > 10:
-        top = get_top_ten(get_users_with_num_follows(follows_names))
-        send_follow_tweet(user, top, 'i paru innych laczków xD')
-    elif len(follows_names) > 0:
-        send_follow_tweet(user, follows_names, '')
-    return follows
+    try:
+        if len(unfollows_names) > 10:
+            top = get_top_ten(get_users_with_num_follows(unfollows_names))
+            send_unfollow_tweet(user, top, 'i paru innych laczków xD')
+        elif len(unfollows_names) > 0:
+            send_unfollow_tweet(user, unfollows_names, '')
+        if len(follows_names) > 10:
+            top = get_top_ten(get_users_with_num_follows(follows_names))
+            send_follow_tweet(user, top, 'i paru innych laczków xD')
+        elif len(follows_names) > 0:
+            send_follow_tweet(user, follows_names, '')
+        if follows:
+            return follows
+        else:
+            return old_follows
+    except:
+        print('Tweet duplicate')
+        return old_follows
 
 
 if __name__ == "__main__":
     users = {}
+    banned = []
+    with open("banned.txt", 'r') as b:
+        for line in b:
+            banned.append(line.strip())
     with open('user_ids.txt', 'r') as f:
         for line in f:
             values = line.strip().split(' ')
@@ -182,15 +201,19 @@ if __name__ == "__main__":
     new_data = {}
     old_follows = load_from_json()
     for username, user_id in users.items():
-        if username in old_follows:
-            new_data[username] = get_changes_and_send_tweets(username, user_id, old_follows[username])
-        else:
-            new_data[username] = get_follows(user_id)
+            print(username)
+            try:
+                if username in old_follows:
+                    new_data[username] = get_changes_and_send_tweets(username, user_id, old_follows[username])
+                else:
+                    new_data[username] = get_follows(user_id)
+            except:
+                new_data[username] = old_follows[username]
     save_to_json(new_data)
 
-    '''test_follow = {}
+'''    test_follow = {}
     for k, v in users.items():
         test_follow[k] = get_follows(v)
-        print('done')
+        print(k, v,'done')
     save_to_json(test_follow)
     print('done')'''
