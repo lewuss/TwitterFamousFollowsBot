@@ -134,11 +134,11 @@ def get_top_ten(users_with_follows_num):
 
 
 def send_unfollow_tweet(user, unfollows, comment):
-    tweeter.update_status(f"{user} has just unfollowed {', '.join(unfollows)} {comment} 🤯")
+    tweeter.create_tweet(text=f"{user} has just unfollowed {', '.join(unfollows)} {comment} 🤯")
 
 
 def send_follow_tweet(user, unfollows, comment):
-    tweeter.update_status(f"{user} has just followed {', '.join(unfollows)} {comment}")
+    tweeter.create_tweet(text=f"{user} has just followed {', '.join(unfollows)} {comment}")
 
 
 def get_name_from_id(id):
